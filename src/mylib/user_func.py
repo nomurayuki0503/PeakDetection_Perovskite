@@ -107,7 +107,8 @@ def generate_cmap(colors):
     return LinearSegmentedColormap.from_list('custom_cmap', color_list)
 
 # Analysis for SrTiO3-like pervskite materials
-def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_peak, fit_method):
+#def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_peak, fit_method):
+def analysis_pervskite(Z, col, peaks_x, peaks_y, size_peak):
     # Clustering
     kmeans_model = KMeans(n_clusters=col).fit(np.reshape(peaks_y, [-1, 1]))    # Kmeans法を用いて輝点を行ごとに分類(y座標の値で判定)
     labels = kmeans_model.labels_
@@ -118,22 +119,22 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_pe
     cluster_index = { k:v for k,v in enumerate(cluster_centers.argsort()) }    # "cluster_index"は"cluster_centers"の各要素が、何番目に小さいかを示している。「0:8」であれば、"cluster_centers"の要素0は9番目に小さい(下から9行目の原子カラム列)
     align_peaks_x = np.array( [ np.array(peaks_x)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )         # "peaks_x"の値を小さい順に各行ごとに取り出してndarray化
     align_peaks_y = np.array( [ np.array(peaks_y)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )         # "peaks_y"の値を小さい順に各行ごとに取り出してndarray化
-    if fit_method == "bayes":
-        align_sd_x = np.array( [ np.array(sd_x_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
-        align_sd_y = np.array( [ np.array(sd_y_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
+    #if fit_method == "bayes":
+    #    align_sd_x = np.array( [ np.array(sd_x_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
+    #    align_sd_y = np.array( [ np.array(sd_y_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
     x_index = [ { k:v for k,v in enumerate(align_peaks_x[h].argsort()) } for h in range(col) ]                          # 各行内の原子カラムを小さい順に並べるために各要素が何番目に小さいかを辞書化(上と同じことを各行で実施)。
     align_peaks_x =  [ [ align_peaks_x[h][x_index[h][i]] for i in range(len(align_peaks_x[h])) ] for h in range(col) ]  # 各行の"peaks_x"の値を小さい順に取り出してndarray化
     align_peaks_y =  [ [ align_peaks_y[h][x_index[h][i]] for i in range(len(align_peaks_x[h])) ] for h in range(col) ]  # 各行の"peaks_x"の値を小さい順に取り出してndarray化
-    if fit_method == "bayes":
-        align_sd_x = [ [ align_sd_x[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
-        align_sd_y = [ [ align_sd_y[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
+    #if fit_method == "bayes":
+    #    align_sd_x = [ [ align_sd_x[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
+    #    align_sd_y = [ [ align_sd_y[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
 
     # ここまででピーク座標を縦横小さい順に並べ替えた
     flat_align_peaks_x = [ e for row in align_peaks_x for e in row ]
     flat_align_peaks_y = [ e for row in align_peaks_y for e in row ]
-    if fit_method == "bayes":
-        flat_align_sd_x = [ e for row in align_sd_x for e in row ]
-        flat_align_sd_y = [ e for row in align_sd_y for e in row ]
+    #if fit_method == "bayes":
+    #    flat_align_sd_x = [ e for row in align_sd_x for e in row ]
+    #    flat_align_sd_y = [ e for row in align_sd_y for e in row ]
 
     # Define bottom row as Sr aor Ti
     #row_1 = [ Z[int(y), int(x)] for (x,y) in zip(align_peaks_x[0], align_peaks_y[0]) ]    #1番下の行の原子カラム中心のピクセル強度を取得
@@ -177,29 +178,29 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_pe
                 if abs(align_peaks_x[x][0]-align_peaks_x[min_index_even][0]) > abs(align_peaks_x[x][-1]-align_peaks_x[min_index_even][-1]):    # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
-                        del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
                 elif abs(align_peaks_x[x][0]-align_peaks_x[min_index_even][0]) < abs(align_peaks_x[x][-1]-align_peaks_x[min_index_even][-1]):  # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は右に出ている場合
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
-                        del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
         for i,x in enumerate(index_odd):
             for j in range(dif_odd[i]):
                 if align_peaks_x[x][0] < align_peaks_x[min_index_even][0]:          # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
-                        del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
                 elif align_peaks_x[x][-1] > align_peaks_x[min_index_even][-1]:      # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は右に出ている場合
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
-                        del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
     elif bottom_row == "Ti":
         index_even = [ 2*i for i,x in enumerate(lst_even) if x != min_lst_odd-1 ]   # 偶数行に対して、原子カラム数が(奇数行の最小-1)より多い行のインデックスを取得
         index_odd = [ 2*i+1 for i,x in enumerate(lst_odd) if x != min_lst_odd ]     # 奇数行に対して、原子カラム数が他の行より多い行のインデックスを取得
@@ -211,29 +212,29 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_pe
                 if align_peaks_x[x][0] < align_peaks_x[min_index_odd][0]:           # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][0]                                        # 左原子カラムの座標を削除
-                        del align_sd_y[x][0]                                        # 左子カラムの座標を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][0]                                        # 左原子カラムの座標を削除
+                    #    del align_sd_y[x][0]                                        # 左子カラムの座標を削除
                 elif align_peaks_x[x][-1] > align_peaks_x[min_index_odd][-1]:       # 余分な原子カラムが右か左かどちらに出ているかを判定。左に出ている場合以下を実行
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][-1]                                       # 右端の原子カラムの標準偏差を削除
-                        del align_sd_y[x][-1]                                       # 右端の原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][-1]                                       # 右端の原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][-1]                                       # 右端の原子カラムの標準偏差を削除
         for i,x in enumerate(index_odd):
             for j in range(dif_odd[i]):
                 if abs(align_peaks_x[x][0]-align_peaks_x[min_index_odd][0]) > abs(align_peaks_x[x][-1]-align_peaks_x[min_index_odd][-1]):    # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][0]                                        # 左端の原子カラムの座標を削除
-                        del align_sd_y[x][0]                                        # 左端の原子カラムの座標を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの座標を削除
+                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの座標を削除
                 elif abs(align_peaks_x[x][0]-align_peaks_x[min_index_odd][0]) < abs(align_peaks_x[x][-1]-align_peaks_x[min_index_odd][-1]):  # 余分な原子カラムが右か左かどちらに出ているかを判定。左に出ている場合以下を実行
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    if fit_method == "bayes":
-                        del align_sd_x[x][-1]                                       # 右原子カラムの標準偏差を削除
-                        del align_sd_y[x][-1]                                       # 右原子カラムの標準偏差を削除
+                    #if fit_method == "bayes":
+                    #    del align_sd_x[x][-1]                                       # 右原子カラムの標準偏差を削除
+                    #    del align_sd_y[x][-1]                                       # 右原子カラムの標準偏差を削除
 
     # Calculate atomic displacement
     if bottom_row == "Sr":
@@ -266,6 +267,7 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_pe
     distances = [ ((x**2)+(y**2))**(1/2) for (x,y) in zip(flat_distance_x, flat_distance_y) ]
 
     # Calcurate errors for each unit cell
+    """
     if fit_method == "bayes":
         if bottom_row == "Sr":
             if left_col == "Sr":
@@ -291,12 +293,13 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, sd_x_bayes, sd_y_bayes, size_pe
                 sd_sum_y = [ align_sd_y[i*2] for i in range(1, int(col/2)) ] + sd_average_y         # y座標に関して、Srカラムの重心とTiカラムの差分を計算       
         flat_sd_x = [ e for row in sd_sum_x for e in row ]        # 1次元ベクトル化
         flat_sd_y = [ e for row in sd_sum_y for e in row ]        # 1次元ベクトル化
-    
+
     if fit_method == "simple":
         flat_sd_x = []
         flat_sd_y = []
         flat_align_sd_x = []
         flat_align_sd_y = []
+    """
 
-    return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_sd_x, flat_sd_y, flat_align_sd_x, flat_align_sd_y, flat_center_x, flat_center_y
-    
+    #return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_sd_x, flat_sd_y, flat_align_sd_x, flat_align_sd_y, flat_center_x, flat_center_y
+    return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_center_x, flat_center_y    
