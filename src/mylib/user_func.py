@@ -49,10 +49,12 @@ def gauss(data, size_peak, FWHM):
     x_i, y_i = np.meshgrid(x_i, y_i)
     data = np.reshape(data, (size_peak*size_peak))
     popt, pcov = opt.curve_fit(twoD_Gaussian, (x_i, y_i), data, p0=(max(data)-min(data), size_peak/2, size_peak/2, FWHM/2.35, FWHM/2.35, 1, min(data)))
+    #intens = popt[0]
     cx = popt[1]
     cy = popt[2]
     data_fitted = twoD_Gaussian((x_i, y_i), *popt)
     return cx, cy
+    #return intens, cx, cy
 
 # Bayesian Inference
 def bayesian_inference(size_peak, patch, num_sample, chains):
@@ -119,26 +121,15 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, size_peak):
     cluster_index = { k:v for k,v in enumerate(cluster_centers.argsort()) }    # "cluster_index"は"cluster_centers"の各要素が、何番目に小さいかを示している。「0:8」であれば、"cluster_centers"の要素0は9番目に小さい(下から9行目の原子カラム列)
     align_peaks_x = np.array( [ np.array(peaks_x)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )         # "peaks_x"の値を小さい順に各行ごとに取り出してndarray化
     align_peaks_y = np.array( [ np.array(peaks_y)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )         # "peaks_y"の値を小さい順に各行ごとに取り出してndarray化
-    #if fit_method == "bayes":
-    #    align_sd_x = np.array( [ np.array(sd_x_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
-    #    align_sd_y = np.array( [ np.array(sd_y_bayes)[np.where(labels == cluster_index[h])] for h in range(col) ], dtype='object' )
     x_index = [ { k:v for k,v in enumerate(align_peaks_x[h].argsort()) } for h in range(col) ]                          # 各行内の原子カラムを小さい順に並べるために各要素が何番目に小さいかを辞書化(上と同じことを各行で実施)。
     align_peaks_x =  [ [ align_peaks_x[h][x_index[h][i]] for i in range(len(align_peaks_x[h])) ] for h in range(col) ]  # 各行の"peaks_x"の値を小さい順に取り出してndarray化
     align_peaks_y =  [ [ align_peaks_y[h][x_index[h][i]] for i in range(len(align_peaks_x[h])) ] for h in range(col) ]  # 各行の"peaks_x"の値を小さい順に取り出してndarray化
-    #if fit_method == "bayes":
-    #    align_sd_x = [ [ align_sd_x[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
-    #    align_sd_y = [ [ align_sd_y[h][x_index[h][i]] for i in range(len(align_sd_x[h])) ] for h in range(col) ]
 
     # ここまででピーク座標を縦横小さい順に並べ替えた
     flat_align_peaks_x = [ e for row in align_peaks_x for e in row ]
     flat_align_peaks_y = [ e for row in align_peaks_y for e in row ]
-    #if fit_method == "bayes":
-    #    flat_align_sd_x = [ e for row in align_sd_x for e in row ]
-    #    flat_align_sd_y = [ e for row in align_sd_y for e in row ]
 
     # Define bottom row as Sr aor Ti
-    #row_1 = [ Z[int(y), int(x)] for (x,y) in zip(align_peaks_x[0], align_peaks_y[0]) ]    #1番下の行の原子カラム中心のピクセル強度を取得
-    #row_2 = [ Z[int(y), int(x)] for (x,y) in zip(align_peaks_x[1], align_peaks_y[1]) ]    #下から2行目の原子カラム中心のピクセル強度を取得
     row_1 = [ np.average(Z[int(y-size_peak/2):int(y+size_peak/2), int(x-size_peak/2):int(x+size_peak/2)]) for (x,y) in zip(align_peaks_x[0], align_peaks_y[0]) ]    #1番下の行の原子カラムのsize_peak四方のピクセル強度の平均を取得
     row_2 = [ np.average(Z[int(y-size_peak/2):int(y+size_peak/2), int(x-size_peak/2):int(x+size_peak/2)]) for (x,y) in zip(align_peaks_x[1], align_peaks_y[1]) ]    #下から2行目の原子カラムのsize_peak四方ののピクセル強度の平均を取得
 
@@ -178,29 +169,17 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, size_peak):
                 if abs(align_peaks_x[x][0]-align_peaks_x[min_index_even][0]) > abs(align_peaks_x[x][-1]-align_peaks_x[min_index_even][-1]):    # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
                 elif abs(align_peaks_x[x][0]-align_peaks_x[min_index_even][0]) < abs(align_peaks_x[x][-1]-align_peaks_x[min_index_even][-1]):  # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は右に出ている場合
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
         for i,x in enumerate(index_odd):
             for j in range(dif_odd[i]):
                 if align_peaks_x[x][0] < align_peaks_x[min_index_even][0]:          # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの標準偏差を削除
                 elif align_peaks_x[x][-1] > align_peaks_x[min_index_even][-1]:      # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は右に出ている場合
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][-1]                                        #右端の原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][-1]                                        #右端の原子カラムの標準偏差を削除
     elif bottom_row == "Ti":
         index_even = [ 2*i for i,x in enumerate(lst_even) if x != min_lst_odd-1 ]   # 偶数行に対して、原子カラム数が(奇数行の最小-1)より多い行のインデックスを取得
         index_odd = [ 2*i+1 for i,x in enumerate(lst_odd) if x != min_lst_odd ]     # 奇数行に対して、原子カラム数が他の行より多い行のインデックスを取得
@@ -212,29 +191,17 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, size_peak):
                 if align_peaks_x[x][0] < align_peaks_x[min_index_odd][0]:           # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][0]                                        # 左原子カラムの座標を削除
-                    #    del align_sd_y[x][0]                                        # 左子カラムの座標を削除
                 elif align_peaks_x[x][-1] > align_peaks_x[min_index_odd][-1]:       # 余分な原子カラムが右か左かどちらに出ているかを判定。左に出ている場合以下を実行
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][-1]                                       # 右端の原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][-1]                                       # 右端の原子カラムの標準偏差を削除
         for i,x in enumerate(index_odd):
             for j in range(dif_odd[i]):
                 if abs(align_peaks_x[x][0]-align_peaks_x[min_index_odd][0]) > abs(align_peaks_x[x][-1]-align_peaks_x[min_index_odd][-1]):    # 余分な原子カラムが右か左かどちらに出ているかを判定。この条件は左に出ている場合
                     del align_peaks_x[x][0]                                         # 左端の原子カラムの座標を削除
                     del align_peaks_y[x][0]                                         # 左端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][0]                                        # 左端の原子カラムの座標を削除
-                    #    del align_sd_y[x][0]                                        # 左端の原子カラムの座標を削除
                 elif abs(align_peaks_x[x][0]-align_peaks_x[min_index_odd][0]) < abs(align_peaks_x[x][-1]-align_peaks_x[min_index_odd][-1]):  # 余分な原子カラムが右か左かどちらに出ているかを判定。左に出ている場合以下を実行
                     del align_peaks_x[x][-1]                                        # 右端の原子カラムの座標を削除
                     del align_peaks_y[x][-1]                                        # 右端の原子カラムの座標を削除
-                    #if fit_method == "bayes":
-                    #    del align_sd_x[x][-1]                                       # 右原子カラムの標準偏差を削除
-                    #    del align_sd_y[x][-1]                                       # 右原子カラムの標準偏差を削除
 
     # Calculate atomic displacement
     if bottom_row == "Sr":
@@ -266,40 +233,33 @@ def analysis_pervskite(Z, col, peaks_x, peaks_y, size_peak):
     flat_distance_y = [ e for row in distance_y for e in row ]    # 1次元ベクトル化
     distances = [ ((x**2)+(y**2))**(1/2) for (x,y) in zip(flat_distance_x, flat_distance_y) ]
 
-    # Calcurate errors for each unit cell
-    """
-    if fit_method == "bayes":
-        if bottom_row == "Sr":
-            if left_col == "Sr":
-                sd_average_x = np.array([ [ (align_sd_x[h*2][i]+align_sd_x[h*2][i+1]+align_sd_x[h*2+2][i]+align_sd_x[h*2+2][i+1])/4 for i in range(len(align_sd_x[h*2])-1) ] for h in range(int(col/2-1+col%2)) ])    # x座標の標準偏差の平均の計算
-                sd_average_y = np.array([ [ (align_sd_y[h*2][i]+align_sd_y[h*2][i+1]+align_sd_y[h*2+2][i]+align_sd_y[h*2+2][i+1])/4 for i in range(len(align_sd_x[h*2])-1) ] for h in range(int(col/2-1+col%2)) ])    # y座標の標準偏差の平均の計算
-                sd_sum_x = [ align_sd_x[i*2+1] for i in range(int(col/2-1+col%2)) ] + sd_average_x    # x座標に関して、4つのSrカラムの標準偏差の平均とTiカラムの標準偏差の和を計算 
-                sd_sum_y = [ align_sd_y[i*2+1] for i in range(int(col/2-1+col%2)) ] + sd_average_y    # y座標に関して、4つのSrカラムの標準偏差の平均とTiカラムの標準偏差の和を計算
-            elif left_col == "Ti":
-                sd_average_x = np.array([ [ (align_sd_x[h*2][i]+align_sd_x[h*2][i+1]+align_sd_x[h*2+2][i]+align_sd_x[h*2+2][i+1])/4 for i in range(len(align_sd_x[h*2])-1) ] for h in range(int(col/2-1+col%2)) ])    # x座標の標準偏差の平均の計算
-                sd_average_y = np.array([ [ (align_sd_y[h*2][i]+align_sd_y[h*2][i+1]+align_sd_y[h*2+2][i]+align_sd_y[h*2+2][i+1])/4 for i in range(len(align_sd_x[h*2])-1) ] for h in range(int(col/2-1+col%2)) ])    # y座標の標準偏差の平均の計算
-                sd_sum_x = [ align_sd_x[i*2+1] for i in range(int(col/2-1+col%2)) ] + sd_average_x    # x座標に関して、Srカラムの重心とTiカラムの差分を計算 
-                sd_sum_y = [ align_sd_y[i*2+1] for i in range(int(col/2-1+col%2)) ] + sd_average_y    # y座標に関して、Srカラムの重心とTiカラムの差分を計算
-        if bottom_row == "Ti":
-            if left_col == "Ti":
-                sd_average_x = np.array([ [ (align_sd_x[h*2+1][i]+align_sd_x[h*2+1][i+1]+align_sd_x[h*2+3][i]+align_sd_x[h*2+3][i+1])/4 for i in range(len(align_peaks_x[h*2+1])-1) ] for h in range(int(col/2-1)) ])    # x座標の標準偏差の平均の計算
-                sd_average_y = np.array([ [ (align_sd_y[h*2+1][i]+align_sd_y[h*2+1][i+1]+align_sd_y[h*2+3][i]+align_sd_y[h*2+3][i+1])/4 for i in range(len(align_peaks_x[h*2+1])-1) ] for h in range(int(col/2-1)) ])    # y座標の標準偏差の平均の計算
-                sd_sum_x = [ align_sd_x[i*2][:-1] for i in range(1, int(col/2)) ] + sd_average_x         # x座標に関して、Srカラムの重心とTiカラムの差分を計算
-                sd_sum_y = [ align_sd_y[i*2][:-1] for i in range(1, int(col/2)) ] + sd_average_y         # y座標に関して、Srカラムの重心とTiカラムの差分を計算
-            elif left_col == "Sr":
-                sd_average_x = np.array([ [ (align_sd_x[h*2+1][i]+align_sd_x[h*2+1][i+1]+align_sd_x[h*2+3][i]+align_sd_x[h*2+3][i+1])/4 for i in range(len(align_peaks_x[h*2+1])-1) ] for h in range(int(col/2-1)) ])    # x座標の標準偏差の平均の計算
-                sd_average_y = np.array([ [ (align_sd_y[h*2+1][i]+align_sd_y[h*2+1][i+1]+align_sd_y[h*2+3][i]+align_sd_y[h*2+3][i+1])/4 for i in range(len(align_peaks_x[h*2+1])-1) ] for h in range(int(col/2-1)) ])    # y座標の標準偏差の平均の計算
-                sd_sum_x = [ align_sd_x[i*2] for i in range(1, int(col/2)) ] + sd_average_x         # x座標に関して、Srカラムの重心とTiカラムの差分を計算
-                sd_sum_y = [ align_sd_y[i*2] for i in range(1, int(col/2)) ] + sd_average_y         # y座標に関して、Srカラムの重心とTiカラムの差分を計算       
-        flat_sd_x = [ e for row in sd_sum_x for e in row ]        # 1次元ベクトル化
-        flat_sd_y = [ e for row in sd_sum_y for e in row ]        # 1次元ベクトル化
+    return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_center_x, flat_center_y
 
-    if fit_method == "simple":
-        flat_sd_x = []
-        flat_sd_y = []
-        flat_align_sd_x = []
-        flat_align_sd_y = []
-    """
+# Calculate shift probabilities in 8 directions
+def shift_probability(pred_flat_distance_x, pred_flat_distance_y):
+    ranges = [(0, 22.5), (22.5, 67.5), (67.5, 112.5), (112.5, 157.5), (157.5, 202.5), (202.5, 247.5), (247.5, 292.5), (292.5, 337.5), (337.5, 360)]
 
-    #return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_sd_x, flat_sd_y, flat_align_sd_x, flat_align_sd_y, flat_center_x, flat_center_y
-    return distances, flat_distance_x, flat_distance_y, flat_align_peaks_x, flat_align_peaks_y, flat_center_x, flat_center_y    
+    probabilities = []
+
+    for i in range(len(pred_flat_distance_x[0])):
+        x = [row[i] for row in pred_flat_distance_x]
+        y = [row[i] for row in pred_flat_distance_y]
+        angle = np.arctan2(y, x) * (180 / np.pi)
+
+        angle = np.where(angle < 0, angle + 360, angle)
+
+        probabilities_i = []
+        total_count = 0
+        for r in ranges:
+            count = np.sum((r[0] <= angle) & (angle < r[1]))
+            probabilities_i.append(count)
+            total_count += count
+
+        # Combine the first and last ranges to cover 337.5° to 22.5°
+        probabilities_i[0] += probabilities_i[-1]
+        probabilities_i.pop(-1)
+
+        probabilities_i = [p / total_count for p in probabilities_i]
+        probabilities.append(probabilities_i)
+
+    return probabilities
